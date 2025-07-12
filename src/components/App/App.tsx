@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMovies } from "../../services/movieService";
-import type { Movie, MovieResponse } from "../../types/movie";
+import type { Movie } from "../../types/movie";
 import SearchBar from "../SearchBar/SearchBar";
 import MovieGrid from "../MovieGrid/MovieGrid";
 import Loader from "../Loader/Loader";
@@ -17,10 +17,14 @@ export default function App() {
   const [page, setPage] = useState(1);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
-  const { data, isLoading, isError, error } = useQuery<MovieResponse, Error>({
+  const { data, isLoading, isError, error, isFetching } = useQuery<
+    ReturnType<typeof fetchMovies> extends Promise<infer R> ? R : never,
+    Error
+  >({
     queryKey: ["movies", query, page],
     queryFn: () => fetchMovies(query, page),
     enabled: !!query,
+    placeholderData: (prev) => prev,
   });
 
   useEffect(() => {
@@ -31,7 +35,10 @@ export default function App() {
           : "Failed to fetch movies"
       );
     }
-  }, [error]);
+    if (data && data.results.length === 0 && !isLoading && !isFetching) {
+      toast.error("No movies found for your request");
+    }
+  }, [error, data, isLoading, isFetching]);
 
   const handleSearch = useCallback((searchQuery: string) => {
     setQuery(searchQuery);
